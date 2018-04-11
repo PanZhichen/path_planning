@@ -1,0 +1,15 @@
+<launch>
+
+	<node pkg="path_planning" type="pub_octomap" name="pub_octomap" args="/home/molmc-chy/SLAM-proj/octomap.bt"/>
+
+	<node pkg="path_planning" type="path_planning_node" name="path_planning_node" args="0.5 2.0 0.0 0.5 -2.5 0.2" output="screen" />	
+
+	<node pkg="path_planning" type="timed_roslaunch.sh" args="5 rosbag play /home/molmc-chy/SLAM-proj/bagfiles/with_collision.bag" name="timed_roslaunch" required="true"/>
+
+	<node pkg="path_planning" type="realtime_octomap" name="realtime_octomap" />
+
+        <node pkg="path_planning" type="collision_detection" name="collision_detection" output="screen"  launch-prefix="gnome-terminal -e"/>
+
+        <arg name="command_args" value="-d /home/molmc-chy/.rviz/collision_detection.rviz" />  
+  	<node pkg="rviz" type="rviz" name="rviz" args="$(arg command_args)"/>
+</launch>

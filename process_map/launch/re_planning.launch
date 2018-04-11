@@ -1,0 +1,17 @@
+<launch>
+	
+	<node pkg="path_planning" type="pub_octomap" name="pub_octomap" args="/home/molmc-chy/SLAM-proj/vins3-octomap.bt"/>
+
+	<node pkg="remove" type="remove_outliers" name="remove_oueliers"/>
+
+	<node pkg="path_planning" type="re_planning" name="re_planning" args="0.0 0.0 0.1 5.0 0.5 0.1" output="screen">
+		<!--remap from="/voxel_cloud" to="/filtered_cloud" /-->
+        </node>
+
+        <arg name="command_args" value="-d /home/molmc-chy/.rviz/default.rviz" />  
+  	<!--node pkg="rviz" type="rviz" name="rviz" args="$(arg command_args)"/-->
+
+	<!--node pkg="path_planning" type="timed_roslaunch.sh" args="5 rosbag play /home/molmc-chy/SLAM-proj/bagfiles/cloud_G1.bag" name="timed_roslaunch" required="true"/-->
+
+</launch>
+

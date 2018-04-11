@@ -1,0 +1,7 @@
+<launch>
+	<!--When have .bt/.ot octomap file, use this node to convert the .bt/.ot file to the message which type is "octomap_msgs::Octomap"-->	
+	<node pkg="path_planning" type="pub_octomap" name="pub_octomap" args="/home/molmc-chy/SLAM-proj/octomap.bt"/>
+
+	<node pkg="path_planning" type="path_planning_node" name="path_planning_node" args="0.5 2.0 0.0 0.5 -2.5 0.2" output="screen" />
+
+</launch>

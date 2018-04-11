@@ -1,0 +1,2 @@
+float x
+bool renew
