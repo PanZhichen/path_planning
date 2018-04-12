@@ -63,22 +63,21 @@ public:
 	}
 	void setStart(double x, double y, double z)
 	{
-		ob::ScopedState<ob::SE3StateSpace> start(space);
-		start->setXYZ(x,y,z);
-		start->as<ob::SO3StateSpace::StateType>(1)->setIdentity();
+		ob::ScopedState<> start(space);
+		start->as<ob::RealVectorStateSpace::StateType>()->values[0] = x;
+		start->as<ob::RealVectorStateSpace::StateType>()->values[1] = y;
 		pdef->clearStartStates();
 		pdef->addStartState(start);
 	}
 	void setGoal(double x, double y, double z)
 	{
-		if(prev_goal[0] != x || prev_goal[1] != y || prev_goal[2] != z)
+		if(prev_goal[0] != x || prev_goal[1] != y )
 		{
-			ob::ScopedState<ob::SE3StateSpace> goal(space);
-			goal->setXYZ(x,y,z);
+			ob::ScopedState<> goal(space);
+			goal->as<ob::RealVectorStateSpace::StateType>()->values[0] = x;
+		        goal->as<ob::RealVectorStateSpace::StateType>()->values[1] = y;
 			prev_goal[0] = x;
 			prev_goal[1] = y;
-			prev_goal[2] = z;
-			goal->as<ob::SO3StateSpace::StateType>(1)->setIdentity();
 			pdef->clearGoal();
 			pdef->setGoalState(goal);
 			std::cout << "Goal point set to: " << x << " " << y << " " << z << std::endl;
@@ -94,42 +93,42 @@ public:
 	// Constructor
 	planner(void)
 	{
-		Quadcopter = std::shared_ptr<fcl::CollisionGeometry>(new fcl::Box(0.3, 0.3, 0.1));
+		Quadcopter = std::shared_ptr<fcl::CollisionGeometry>(new fcl::Box(0.3, 0.3, 0.01));
 		fcl::OcTree* tree = new fcl::OcTree(std::shared_ptr<const octomap::OcTree>(new octomap::OcTree(0.1)));
 		tree_obj = std::shared_ptr<fcl::CollisionGeometry>(tree);
 		
-		space = ob::StateSpacePtr(new ob::SE3StateSpace());
+		space = ob::StateSpacePtr(new ob::RealVectorStateSpace(2));
 
 		// create a start state
-		ob::ScopedState<ob::SE3StateSpace> start(space);
+		ob::ScopedState<> start(space);
 		
 		// create a goal state
-		ob::ScopedState<ob::SE3StateSpace> goal(space);
+		ob::ScopedState<> goal(space);
 
 		// set the bounds for the R^3 part of SE(3)
-		ob::RealVectorBounds bounds(3);
+		ob::RealVectorBounds bounds(2);
 
 		bounds.setLow(0,-5);
 		bounds.setHigh(0,5);
 		bounds.setLow(1,-5);
 		bounds.setHigh(1,5);
-		bounds.setLow(2,-0.5);
-		bounds.setHigh(2,1);
+// 		bounds.setLow(2,-0.5);
+// 		bounds.setHigh(2,1);
 
-		space->as<ob::SE3StateSpace>()->setBounds(bounds);
+// 		space->as<ob::RealVectorStateSpace>()->setBounds(bounds);
+		space->as<ob::RealVectorStateSpace>()->setBounds(-5.0,5.0);
 
 		// construct an instance of  space information from this state space
 		si = ob::SpaceInformationPtr(new ob::SpaceInformation(space));
 
-		start->setXYZ(0,0,0);
-		start->as<ob::SO3StateSpace::StateType>(1)->setIdentity();
+		start->as<ob::RealVectorStateSpace::StateType>()->values[0] = 0.0;
+		start->as<ob::RealVectorStateSpace::StateType>()->values[1] = 0.0;
 		// start.random();
 
-		goal->setXYZ(0,0,0);
+		goal->as<ob::RealVectorStateSpace::StateType>()->values[0] = 0.0;
+		goal->as<ob::RealVectorStateSpace::StateType>()->values[1] = 0.0;
 		prev_goal[0] = 0;
 		prev_goal[1] = 0;
-		prev_goal[2] = 0;
-		goal->as<ob::SO3StateSpace::StateType>(1)->setIdentity();
 		// goal.random();
 		
 	    // set state validity checking for this space
@@ -194,53 +193,53 @@ public:
 		pdef->print(std::cout);
 
 	    // attempt to solve the problem within one second of planning time
-		ob::PlannerStatus solved = plan->solve(2);
+		ob::PlannerStatus solved = plan->solve(0.05);
 
 		if (solved)
 		{
-	        // get the goal representation from the problem definition (not the same as the goal state)
-	        // and inquire about the found path
-			std::cout << "Found solution:" << std::endl;
-			ob::PathPtr path = pdef->getSolutionPath();
-			og::PathGeometric* pth = pdef->getSolutionPath()->as<og::PathGeometric>();
-			pth->printAsMatrix(std::cout);
-	        // print the path to screen
-	        // path->print(std::cout);
-			trajectory_msgs::MultiDOFJointTrajectory msg;
-			trajectory_msgs::MultiDOFJointTrajectoryPoint point_msg;
-
-			msg.header.stamp = ros::Time::now();
-			msg.header.frame_id = "odom";
-			msg.joint_names.clear();
-			msg.points.clear();
-			msg.joint_names.push_back("Quadcopter");
-			
-			for (std::size_t path_idx = 0; path_idx < pth->getStateCount (); path_idx++)
-			{
-				const ob::SE3StateSpace::StateType *se3state = pth->getState(path_idx)->as<ob::SE3StateSpace::StateType>();
-
-	            // extract the first component of the state and cast it to what we expect
-				const ob::RealVectorStateSpace::StateType *pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
-
-	            // extract the second component of the state and cast it to what we expect
-				const ob::SO3StateSpace::StateType *rot = se3state->as<ob::SO3StateSpace::StateType>(1);
-
-				point_msg.time_from_start.fromSec(ros::Time::now().toSec());
-				point_msg.transforms.resize(1);
-
-				point_msg.transforms[0].translation.x= pos->values[0];
-				point_msg.transforms[0].translation.y = pos->values[1];
-				point_msg.transforms[0].translation.z = pos->values[2];
-
-				point_msg.transforms[0].rotation.x = rot->x;
-				point_msg.transforms[0].rotation.y = rot->y;
-				point_msg.transforms[0].rotation.z = rot->z;
-				point_msg.transforms[0].rotation.w = rot->w;
-
-				msg.points.push_back(point_msg);
-
-			}
-			traj_pub.publish(msg);
+// 	        // get the goal representation from the problem definition (not the same as the goal state)
+// 	        // and inquire about the found path
+// 			std::cout << "Found solution:" << std::endl;
+// 			ob::PathPtr path = pdef->getSolutionPath();
+// 			og::PathGeometric* pth = pdef->getSolutionPath()->as<og::PathGeometric>();
+// 			pth->printAsMatrix(std::cout);
+// 	        // print the path to screen
+// 	        // path->print(std::cout);
+// 			trajectory_msgs::MultiDOFJointTrajectory msg;
+// 			trajectory_msgs::MultiDOFJointTrajectoryPoint point_msg;
+// 
+// 			msg.header.stamp = ros::Time::now();
+// 			msg.header.frame_id = "odom";
+// 			msg.joint_names.clear();
+// 			msg.points.clear();
+// 			msg.joint_names.push_back("Quadcopter");
+// 			
+// 			for (std::size_t path_idx = 0; path_idx < pth->getStateCount (); path_idx++)
+// 			{
+// 				const ob::RealVectorStateSpace::StateType *pose = pth->getState(path_idx)->as<ob::RealVectorStateSpace::StateType>();
+// 
+// // 	            // extract the first component of the state and cast it to what we expect
+// // 				const ob::RealVectorStateSpace::StateType *pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
+// // 
+// // 	            // extract the second component of the state and cast it to what we expect
+// // 				const ob::SO3StateSpace::StateType *rot = se3state->as<ob::SO3StateSpace::StateType>(1);
+// 
+// 				point_msg.time_from_start.fromSec(ros::Time::now().toSec());
+// 				point_msg.transforms.resize(1);
+// 
+// 				point_msg.transforms[0].translation.x= pose->values[0];
+// 				point_msg.transforms[0].translation.y = pose->values[1];
+// 				point_msg.transforms[0].translation.z = 0.0;
+// 
+// 				point_msg.transforms[0].rotation.x = 0.0;
+// 				point_msg.transforms[0].rotation.y = 0.0;
+// 				point_msg.transforms[0].rotation.z = 0.0;
+// 				point_msg.transforms[0].rotation.w = 1.0;
+// 
+// 				msg.points.push_back(point_msg);
+// 
+// 			}
+// 			traj_pub.publish(msg);
 
 			
 	        //Path smoothing using bspline
@@ -261,13 +260,13 @@ public:
 			for (std::size_t idx = 0; idx < path_smooth->getStateCount (); idx++)
 			{
 	                // cast the abstract state type to the type we expect
-				const ob::SE3StateSpace::StateType *se3state = path_smooth->getState(idx)->as<ob::SE3StateSpace::StateType>();
+				const ob::RealVectorStateSpace::StateType *pose = path_smooth->getState(idx)->as<ob::RealVectorStateSpace::StateType>();
 
-	            // extract the first component of the state and cast it to what we expect
-				const ob::RealVectorStateSpace::StateType *pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
-
-	            // extract the second component of the state and cast it to what we expect
-				const ob::SO3StateSpace::StateType *rot = se3state->as<ob::SO3StateSpace::StateType>(1);
+// 	            // extract the first component of the state and cast it to what we expect
+// 				const ob::RealVectorStateSpace::StateType *pos = pose->as<ob::RealVectorStateSpace::StateType>(0);
+// 
+// 	            // extract the second component of the state and cast it to what we expect
+// 				const ob::SO3StateSpace::StateType *rot = pose->as<ob::SO3StateSpace::StateType>(1);
 				
 				marker.header.frame_id = "odom";
 				marker.header.stamp = ros::Time();
@@ -275,16 +274,16 @@ public:
 				marker.id = idx;
 				marker.type = visualization_msgs::Marker::CUBE;
 				marker.action = visualization_msgs::Marker::ADD;
-				marker.pose.position.x = pos->values[0];
-				marker.pose.position.y = pos->values[1];
-				marker.pose.position.z = pos->values[2];
-				marker.pose.orientation.x = rot->x;
-				marker.pose.orientation.y = rot->y;
-				marker.pose.orientation.z = rot->z;
-				marker.pose.orientation.w = rot->w;
-				marker.scale.x = 0.15;
-				marker.scale.y = 0.15;
-				marker.scale.z = 0.15;
+				marker.pose.position.x = pose->values[0];
+				marker.pose.position.y = pose->values[1];
+				marker.pose.position.z = 0.0;
+				marker.pose.orientation.x = 0.0;
+				marker.pose.orientation.y = 0.0;
+				marker.pose.orientation.z = 0.0;
+				marker.pose.orientation.w = 1.0;
+				marker.scale.x = 0.05;
+				marker.scale.y = 0.05;
+				marker.scale.z = 0.05;
 				marker.color.a = 1.0;
 				marker.color.r = 0.0;
 				marker.color.g = 1.0;
@@ -314,7 +313,7 @@ private:
 	ob::ProblemDefinitionPtr pdef;
 
 	// goal state
-	double prev_goal[3];
+	double prev_goal[2];
 
 	og::PathGeometric* path_smooth = NULL;
 
@@ -330,20 +329,20 @@ private:
 	bool isStateValid(const ob::State *state)
 	{
 	    // cast the abstract state type to the type we expect
-		const ob::SE3StateSpace::StateType *se3state = state->as<ob::SE3StateSpace::StateType>();
+		const ob::RealVectorStateSpace::StateType *pose = state->as<ob::RealVectorStateSpace::StateType>();
 
-	    // extract the first component of the state and cast it to what we expect
-		const ob::RealVectorStateSpace::StateType *pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
-
-	    // extract the second component of the state and cast it to what we expect
-		const ob::SO3StateSpace::StateType *rot = se3state->as<ob::SO3StateSpace::StateType>(1);
+// 	    // extract the first component of the state and cast it to what we expect
+// 		const ob::RealVectorStateSpace::StateType *pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
+// 
+// 	    // extract the second component of the state and cast it to what we expect
+// 		const ob::SO3StateSpace::StateType *rot = se3state->as<ob::SO3StateSpace::StateType>(1);
 
 		fcl::CollisionObject treeObj((tree_obj));
 		fcl::CollisionObject aircraftObject(Quadcopter);
 
 	    // check validity of state defined by pos & rot
-		fcl::Vec3f translation(pos->values[0],pos->values[1],pos->values[2]);
-		fcl::Quaternion3f rotation(rot->w, rot->x, rot->y, rot->z);
+		fcl::Vec3f translation(pose->values[0],pose->values[1],0.0);
+		fcl::Quaternion3f rotation(1.0, 0.0, 0.0, 0.0);
 		aircraftObject.setTransform(rotation, translation);
 		fcl::CollisionRequest requestType(1,false,1,false);
 		fcl::CollisionResult collisionResult;
