@@ -94,7 +94,7 @@ public:
 	// Constructor
 	planner(void)
 	{
-		Quadcopter = std::shared_ptr<fcl::CollisionGeometry>(new fcl::Box(0.3, 0.3, 0.1));
+		Quadcopter = std::shared_ptr<fcl::CollisionGeometry>(new fcl::Box(1.3, 1.0, 2.0));
 		fcl::OcTree* tree = new fcl::OcTree(std::shared_ptr<const octomap::OcTree>(new octomap::OcTree(0.1)));
 		tree_obj = std::shared_ptr<fcl::CollisionGeometry>(tree);
 		
@@ -109,12 +109,12 @@ public:
 		// set the bounds for the R^3 part of SE(3)
 		ob::RealVectorBounds bounds(3);
 
-		bounds.setLow(0,-5);
-		bounds.setHigh(0,5);
-		bounds.setLow(1,-5);
-		bounds.setHigh(1,5);
-		bounds.setLow(2,-0.5);
-		bounds.setHigh(2,1);
+		bounds.setLow(0,-15);
+		bounds.setHigh(0,145);
+		bounds.setLow(1,-85);
+		bounds.setHigh(1,20);
+		bounds.setLow(2,-1.5);
+		bounds.setHigh(2,0.0);
 
 		space->as<ob::SE3StateSpace>()->setBounds(bounds);
 
@@ -194,53 +194,53 @@ public:
 		pdef->print(std::cout);
 
 	    // attempt to solve the problem within one second of planning time
-		ob::PlannerStatus solved = plan->solve(2);
+		ob::PlannerStatus solved = plan->solve(10.0);
 
 		if (solved)
 		{
-	        // get the goal representation from the problem definition (not the same as the goal state)
-	        // and inquire about the found path
-			std::cout << "Found solution:" << std::endl;
-			ob::PathPtr path = pdef->getSolutionPath();
-			og::PathGeometric* pth = pdef->getSolutionPath()->as<og::PathGeometric>();
-			pth->printAsMatrix(std::cout);
-	        // print the path to screen
-	        // path->print(std::cout);
-			trajectory_msgs::MultiDOFJointTrajectory msg;
-			trajectory_msgs::MultiDOFJointTrajectoryPoint point_msg;
-
-			msg.header.stamp = ros::Time::now();
-			msg.header.frame_id = "odom";
-			msg.joint_names.clear();
-			msg.points.clear();
-			msg.joint_names.push_back("Quadcopter");
-			
-			for (std::size_t path_idx = 0; path_idx < pth->getStateCount (); path_idx++)
-			{
-				const ob::SE3StateSpace::StateType *se3state = pth->getState(path_idx)->as<ob::SE3StateSpace::StateType>();
-
-	            // extract the first component of the state and cast it to what we expect
-				const ob::RealVectorStateSpace::StateType *pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
-
-	            // extract the second component of the state and cast it to what we expect
-				const ob::SO3StateSpace::StateType *rot = se3state->as<ob::SO3StateSpace::StateType>(1);
-
-				point_msg.time_from_start.fromSec(ros::Time::now().toSec());
-				point_msg.transforms.resize(1);
-
-				point_msg.transforms[0].translation.x= pos->values[0];
-				point_msg.transforms[0].translation.y = pos->values[1];
-				point_msg.transforms[0].translation.z = pos->values[2];
-
-				point_msg.transforms[0].rotation.x = rot->x;
-				point_msg.transforms[0].rotation.y = rot->y;
-				point_msg.transforms[0].rotation.z = rot->z;
-				point_msg.transforms[0].rotation.w = rot->w;
-
-				msg.points.push_back(point_msg);
-
-			}
-			traj_pub.publish(msg);
+// 	        // get the goal representation from the problem definition (not the same as the goal state)
+// 	        // and inquire about the found path
+// 			std::cout << "Found solution:" << std::endl;
+// 			ob::PathPtr path = pdef->getSolutionPath();
+// 			og::PathGeometric* pth = pdef->getSolutionPath()->as<og::PathGeometric>();
+// 			pth->printAsMatrix(std::cout);
+// 	        // print the path to screen
+// 	        // path->print(std::cout);
+// 			trajectory_msgs::MultiDOFJointTrajectory msg;
+// 			trajectory_msgs::MultiDOFJointTrajectoryPoint point_msg;
+// 
+// 			msg.header.stamp = ros::Time::now();
+// 			msg.header.frame_id = "odom";
+// 			msg.joint_names.clear();
+// 			msg.points.clear();
+// 			msg.joint_names.push_back("Quadcopter");
+// 			
+// 			for (std::size_t path_idx = 0; path_idx < pth->getStateCount (); path_idx++)
+// 			{
+// 				const ob::SE3StateSpace::StateType *se3state = pth->getState(path_idx)->as<ob::SE3StateSpace::StateType>();
+// 
+// 	            // extract the first component of the state and cast it to what we expect
+// 				const ob::RealVectorStateSpace::StateType *pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
+// 
+// 	            // extract the second component of the state and cast it to what we expect
+// 				const ob::SO3StateSpace::StateType *rot = se3state->as<ob::SO3StateSpace::StateType>(1);
+// 
+// 				point_msg.time_from_start.fromSec(ros::Time::now().toSec());
+// 				point_msg.transforms.resize(1);
+// 
+// 				point_msg.transforms[0].translation.x= pos->values[0];
+// 				point_msg.transforms[0].translation.y = pos->values[1];
+// 				point_msg.transforms[0].translation.z = pos->values[2];
+// 
+// 				point_msg.transforms[0].rotation.x = rot->x;
+// 				point_msg.transforms[0].rotation.y = rot->y;
+// 				point_msg.transforms[0].rotation.z = rot->z;
+// 				point_msg.transforms[0].rotation.w = rot->w;
+// 
+// 				msg.points.push_back(point_msg);
+// 
+// 			}
+// 			traj_pub.publish(msg);
 
 			
 	        //Path smoothing using bspline
@@ -278,13 +278,13 @@ public:
 				marker.pose.position.x = pos->values[0];
 				marker.pose.position.y = pos->values[1];
 				marker.pose.position.z = pos->values[2];
-				marker.pose.orientation.x = rot->x;
-				marker.pose.orientation.y = rot->y;
-				marker.pose.orientation.z = rot->z;
-				marker.pose.orientation.w = rot->w;
-				marker.scale.x = 0.15;
-				marker.scale.y = 0.15;
-				marker.scale.z = 0.15;
+				marker.pose.orientation.x = 0.0;
+				marker.pose.orientation.y = 0.0;
+				marker.pose.orientation.z = 0.0;
+				marker.pose.orientation.w = 1.0;
+				marker.scale.x = 0.2;
+				marker.scale.y = 0.2;
+				marker.scale.z = 0.2;
 				marker.color.a = 1.0;
 				marker.color.r = 0.0;
 				marker.color.g = 1.0;
@@ -342,7 +342,7 @@ private:
 		fcl::CollisionObject aircraftObject(Quadcopter);
 
 	    // check validity of state defined by pos & rot
-		fcl::Vec3f translation(pos->values[0],pos->values[1],pos->values[2]);
+		fcl::Vec3f translation(pos->values[0],pos->values[1],0.0);
 		fcl::Quaternion3f rotation(rot->w, rot->x, rot->y, rot->z);
 		aircraftObject.setTransform(rotation, translation);
 		fcl::CollisionRequest requestType(1,false,1,false);
@@ -408,7 +408,7 @@ void startCb(const geometry_msgs::PointStamped::ConstPtr &msg, planner* planner_
 void goalCb(const geometry_msgs::PointStamped::ConstPtr &msg, planner* planner_ptr)
 {
 // 	planner_ptr->setGoal(msg->point.x, msg->point.y, msg->point.z);
-        planner_ptr->setGoal(msg->point.x, msg->point.y, 0);
+        planner_ptr->setGoal(msg->point.x, msg->point.y, -0.5);
 }
 
 int main(int argc, char **argv)

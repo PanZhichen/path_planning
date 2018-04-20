@@ -96,3 +96,10 @@ target_link_libraries(re_planning
    orocos-kdl
 )
 
+add_executable(processPointCloud_node src/processPointCloud.cpp)
+
+target_link_libraries(processPointCloud_node
+   ${catkin_LIBRARIES}
+   ${PCL_LIBRARIES}
+)
+

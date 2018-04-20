@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+
+  <node pkg="process_map" type="processPointCloud_node" name="processPointCloud_node" args="/home/nrsl/moveit_ws/map/PointCloudMap1.pcd /home/nrsl/moveit_ws/map/" output="screen" >
+  </node>
+
+  <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d /home/nrsl/moveit_ws/map/processMap.rviz"/>
+
+</launch>
