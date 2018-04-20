@@ -38,7 +38,7 @@ int main(int argc, char **argv)
     //std::cout<<"aoaoaoao!!!"<<datastream<<std::endl;
   }
   static int i=0;
-  ros::Rate loop_rate(1);
+  ros::Rate loop_rate(10);
   while (ros::ok())
   {
 //       if(i<10)
