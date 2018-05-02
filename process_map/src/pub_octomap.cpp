@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 
   std::string file_path;
   if(argc<2)
-      file_path="/home/nrsl/moveit_ws/map/8-10-octomap.bt";
+      file_path="/home/nrsl/moveit_ws/map/Octomap_Origin.bt";
   else
       file_path=argv[1];
   //publisher for the planning scene
@@ -32,11 +32,6 @@ int main(int argc, char **argv)
   //octomap.header.stamp = ros::Time::now();
   octomap.header.frame_id = "odom";
 
-  std::stringstream datastream;
-  if (octomap.data.size() > 0){
-    datastream.write((const char*) &octomap.data[0], octomap.data.size());
-    //std::cout<<"aoaoaoao!!!"<<datastream<<std::endl;
-  }
   static int i=0;
   ros::Rate loop_rate(10);
   while (ros::ok())

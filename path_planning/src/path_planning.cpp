@@ -63,21 +63,22 @@ public:
 	}
 	void setStart(double x, double y, double z)
 	{
-		ob::ScopedState<> start(space);
-		start->as<ob::RealVectorStateSpace::StateType>()->values[0] = x;
-		start->as<ob::RealVectorStateSpace::StateType>()->values[1] = y;
+		ob::ScopedState<ob::SE3StateSpace> start(space);
+		start->setXYZ(x,y,z);
+		start->as<ob::SO3StateSpace::StateType>(1)->setIdentity();
 		pdef->clearStartStates();
 		pdef->addStartState(start);
 	}
 	void setGoal(double x, double y, double z)
 	{
-		if(prev_goal[0] != x || prev_goal[1] != y )
+		if(prev_goal[0] != x || prev_goal[1] != y || prev_goal[2] != z)
 		{
-			ob::ScopedState<> goal(space);
-			goal->as<ob::RealVectorStateSpace::StateType>()->values[0] = x;
-		        goal->as<ob::RealVectorStateSpace::StateType>()->values[1] = y;
+			ob::ScopedState<ob::SE3StateSpace> goal(space);
+			goal->setXYZ(x,y,z);
 			prev_goal[0] = x;
 			prev_goal[1] = y;
+			prev_goal[2] = z;
+			goal->as<ob::SO3StateSpace::StateType>(1)->setIdentity();
 			pdef->clearGoal();
 			pdef->setGoalState(goal);
 			std::cout << "Goal point set to: " << x << " " << y << " " << z << std::endl;
@@ -93,49 +94,42 @@ public:
 	// Constructor
 	planner(void)
 	{
-<<<<<<< HEAD
-		//Quadcopter = std::shared_ptr<fcl::CollisionGeometry>(new fcl::Box(1.3, 1.0, 2.0));
-=======
-		Quadcopter = std::shared_ptr<fcl::CollisionGeometry>(new fcl::Box(0.3, 0.3, 0.01));
->>>>>>> a852ed5682562a1d61c07bfff7061e3cb9718a78
+		Quadcopter = std::shared_ptr<fcl::CollisionGeometry>(new fcl::Box(1.5, 1.5, 2.0));
 		fcl::OcTree* tree = new fcl::OcTree(std::shared_ptr<const octomap::OcTree>(new octomap::OcTree(0.1)));
 		tree_obj = std::shared_ptr<fcl::CollisionGeometry>(tree);
 		
-		space = ob::StateSpacePtr(new ob::RealVectorStateSpace(2));
+		space = ob::StateSpacePtr(new ob::SE3StateSpace());
 
 		// create a start state
-		ob::ScopedState<> start(space);
+		ob::ScopedState<ob::SE3StateSpace> start(space);
 		
 		// create a goal state
-		ob::ScopedState<> goal(space);
+		ob::ScopedState<ob::SE3StateSpace> goal(space);
 
 		// set the bounds for the R^3 part of SE(3)
-		ob::RealVectorBounds bounds(2);
+		ob::RealVectorBounds bounds(3);
 
-<<<<<<< HEAD
-=======
-		bounds.setLow(0,-5);
-		bounds.setHigh(0,5);
-		bounds.setLow(1,-5);
-		bounds.setHigh(1,5);
-		bounds.setLow(2,-0.01);
-		bounds.setHigh(2,0.01);
->>>>>>> a852ed5682562a1d61c07bfff7061e3cb9718a78
+		bounds.setLow(0,-20);
+		bounds.setHigh(0,145);
+		bounds.setLow(1,-85);
+		bounds.setHigh(1,20);
+		bounds.setLow(2,-2.0);
+		bounds.setHigh(2,1.5);
 
-// 		space->as<ob::RealVectorStateSpace>()->setBounds(bounds);
-		space->as<ob::RealVectorStateSpace>()->setBounds(-5.0,5.0);
+		space->as<ob::SE3StateSpace>()->setBounds(bounds);
 
 		// construct an instance of  space information from this state space
 		si = ob::SpaceInformationPtr(new ob::SpaceInformation(space));
 
-		start->as<ob::RealVectorStateSpace::StateType>()->values[0] = 0.0;
-		start->as<ob::RealVectorStateSpace::StateType>()->values[1] = 0.0;
+		start->setXYZ(0,0,0);
+		start->as<ob::SO3StateSpace::StateType>(1)->setIdentity();
 		// start.random();
 
-		goal->as<ob::RealVectorStateSpace::StateType>()->values[0] = 0.0;
-		goal->as<ob::RealVectorStateSpace::StateType>()->values[1] = 0.0;
+		goal->setXYZ(0,0,0);
 		prev_goal[0] = 0;
 		prev_goal[1] = 0;
+		prev_goal[2] = 0;
+		goal->as<ob::SO3StateSpace::StateType>(1)->setIdentity();
 		// goal.random();
 		
 	    // set state validity checking for this space
@@ -200,11 +194,7 @@ public:
 		pdef->print(std::cout);
 
 	    // attempt to solve the problem within one second of planning time
-<<<<<<< HEAD
 		ob::PlannerStatus solved = plan->solve(10.0);
-=======
-		ob::PlannerStatus solved = plan->solve(0.05);
->>>>>>> a852ed5682562a1d61c07bfff7061e3cb9718a78
 
 		if (solved)
 		{
@@ -220,14 +210,13 @@ public:
 // 			trajectory_msgs::MultiDOFJointTrajectoryPoint point_msg;
 // 
 // 			msg.header.stamp = ros::Time::now();
-// 			msg.header.frame_id = "odom";
+// 			msg.header.frame_id = "world";
 // 			msg.joint_names.clear();
 // 			msg.points.clear();
 // 			msg.joint_names.push_back("Quadcopter");
 // 			
 // 			for (std::size_t path_idx = 0; path_idx < pth->getStateCount (); path_idx++)
 // 			{
-<<<<<<< HEAD
 // 				const ob::SE3StateSpace::StateType *se3state = pth->getState(path_idx)->as<ob::SE3StateSpace::StateType>();
 // 
 // 	            // extract the first component of the state and cast it to what we expect
@@ -235,20 +224,10 @@ public:
 // 
 // 	            // extract the second component of the state and cast it to what we expect
 // 				const ob::SO3StateSpace::StateType *rot = se3state->as<ob::SO3StateSpace::StateType>(1);
-=======
-// 				const ob::RealVectorStateSpace::StateType *pose = pth->getState(path_idx)->as<ob::RealVectorStateSpace::StateType>();
-// 
-// // 	            // extract the first component of the state and cast it to what we expect
-// // 				const ob::RealVectorStateSpace::StateType *pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
-// // 
-// // 	            // extract the second component of the state and cast it to what we expect
-// // 				const ob::SO3StateSpace::StateType *rot = se3state->as<ob::SO3StateSpace::StateType>(1);
->>>>>>> a852ed5682562a1d61c07bfff7061e3cb9718a78
 // 
 // 				point_msg.time_from_start.fromSec(ros::Time::now().toSec());
 // 				point_msg.transforms.resize(1);
 // 
-<<<<<<< HEAD
 // 				point_msg.transforms[0].translation.x= pos->values[0];
 // 				point_msg.transforms[0].translation.y = pos->values[1];
 // 				point_msg.transforms[0].translation.z = pos->values[2];
@@ -257,16 +236,6 @@ public:
 // 				point_msg.transforms[0].rotation.y = rot->y;
 // 				point_msg.transforms[0].rotation.z = rot->z;
 // 				point_msg.transforms[0].rotation.w = rot->w;
-=======
-// 				point_msg.transforms[0].translation.x= pose->values[0];
-// 				point_msg.transforms[0].translation.y = pose->values[1];
-// 				point_msg.transforms[0].translation.z = 0.0;
-// 
-// 				point_msg.transforms[0].rotation.x = 0.0;
-// 				point_msg.transforms[0].rotation.y = 0.0;
-// 				point_msg.transforms[0].rotation.z = 0.0;
-// 				point_msg.transforms[0].rotation.w = 1.0;
->>>>>>> a852ed5682562a1d61c07bfff7061e3cb9718a78
 // 
 // 				msg.points.push_back(point_msg);
 // 
@@ -292,13 +261,13 @@ public:
 			for (std::size_t idx = 0; idx < path_smooth->getStateCount (); idx++)
 			{
 	                // cast the abstract state type to the type we expect
-				const ob::RealVectorStateSpace::StateType *pose = path_smooth->getState(idx)->as<ob::RealVectorStateSpace::StateType>();
+				const ob::SE3StateSpace::StateType *se3state = path_smooth->getState(idx)->as<ob::SE3StateSpace::StateType>();
 
-// 	            // extract the first component of the state and cast it to what we expect
-// 				const ob::RealVectorStateSpace::StateType *pos = pose->as<ob::RealVectorStateSpace::StateType>(0);
-// 
-// 	            // extract the second component of the state and cast it to what we expect
-// 				const ob::SO3StateSpace::StateType *rot = pose->as<ob::SO3StateSpace::StateType>(1);
+	            // extract the first component of the state and cast it to what we expect
+				const ob::RealVectorStateSpace::StateType *pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
+
+	            // extract the second component of the state and cast it to what we expect
+				const ob::SO3StateSpace::StateType *rot = se3state->as<ob::SO3StateSpace::StateType>(1);
 				
 				marker.header.frame_id = "odom";
 				marker.header.stamp = ros::Time();
@@ -306,28 +275,16 @@ public:
 				marker.id = idx;
 				marker.type = visualization_msgs::Marker::CUBE;
 				marker.action = visualization_msgs::Marker::ADD;
-<<<<<<< HEAD
 				marker.pose.position.x = pos->values[0];
 				marker.pose.position.y = pos->values[1];
 				marker.pose.position.z = pos->values[2];
-=======
-				marker.pose.position.x = pose->values[0];
-				marker.pose.position.y = pose->values[1];
-				marker.pose.position.z = 0.0;
->>>>>>> a852ed5682562a1d61c07bfff7061e3cb9718a78
-				marker.pose.orientation.x = 0.0;
-				marker.pose.orientation.y = 0.0;
-				marker.pose.orientation.z = 0.0;
-				marker.pose.orientation.w = 1.0;
-<<<<<<< HEAD
-				marker.scale.x = 0.2;
-				marker.scale.y = 0.2;
-				marker.scale.z = 0.2;
-=======
-				marker.scale.x = 0.05;
-				marker.scale.y = 0.05;
-				marker.scale.z = 0.05;
->>>>>>> a852ed5682562a1d61c07bfff7061e3cb9718a78
+				marker.pose.orientation.x = rot->x;
+				marker.pose.orientation.y = rot->y;
+				marker.pose.orientation.z = rot->z;
+				marker.pose.orientation.w = rot->w;
+				marker.scale.x = 0.35;
+				marker.scale.y = 0.35;
+				marker.scale.z = 0.35;
 				marker.color.a = 1.0;
 				marker.color.r = 0.0;
 				marker.color.g = 1.0;
@@ -357,7 +314,7 @@ private:
 	ob::ProblemDefinitionPtr pdef;
 
 	// goal state
-	double prev_goal[2];
+	double prev_goal[3];
 
 	og::PathGeometric* path_smooth = NULL;
 
@@ -373,25 +330,20 @@ private:
 	bool isStateValid(const ob::State *state)
 	{
 	    // cast the abstract state type to the type we expect
-		const ob::RealVectorStateSpace::StateType *pose = state->as<ob::RealVectorStateSpace::StateType>();
+		const ob::SE3StateSpace::StateType *se3state = state->as<ob::SE3StateSpace::StateType>();
 
-// 	    // extract the first component of the state and cast it to what we expect
-// 		const ob::RealVectorStateSpace::StateType *pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
-// 
-// 	    // extract the second component of the state and cast it to what we expect
-// 		const ob::SO3StateSpace::StateType *rot = se3state->as<ob::SO3StateSpace::StateType>(1);
+	    // extract the first component of the state and cast it to what we expect
+		const ob::RealVectorStateSpace::StateType *pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
+
+	    // extract the second component of the state and cast it to what we expect
+		const ob::SO3StateSpace::StateType *rot = se3state->as<ob::SO3StateSpace::StateType>(1);
 
 		fcl::CollisionObject treeObj((tree_obj));
 		fcl::CollisionObject aircraftObject(Quadcopter);
 
 	    // check validity of state defined by pos & rot
-<<<<<<< HEAD
-		fcl::Vec3f translation(pos->values[0],pos->values[1],0.0);
+		fcl::Vec3f translation(pos->values[0],pos->values[1],pos->values[2]);
 		fcl::Quaternion3f rotation(rot->w, rot->x, rot->y, rot->z);
-=======
-		fcl::Vec3f translation(pose->values[0],pose->values[1],0.0);
-		fcl::Quaternion3f rotation(1.0, 0.0, 0.0, 0.0);
->>>>>>> a852ed5682562a1d61c07bfff7061e3cb9718a78
 		aircraftObject.setTransform(rotation, translation);
 		fcl::CollisionRequest requestType(1,false,1,false);
 		fcl::CollisionResult collisionResult;
@@ -455,8 +407,7 @@ void startCb(const geometry_msgs::PointStamped::ConstPtr &msg, planner* planner_
 
 void goalCb(const geometry_msgs::PointStamped::ConstPtr &msg, planner* planner_ptr)
 {
-// 	planner_ptr->setGoal(msg->point.x, msg->point.y, msg->point.z);
-        planner_ptr->setGoal(msg->point.x, msg->point.y, -0.5);
+	planner_ptr->setGoal(msg->point.x, msg->point.y, msg->point.z+1.5);
 }
 
 int main(int argc, char **argv)
@@ -464,6 +415,8 @@ int main(int argc, char **argv)
 	ros::init(argc, argv, "octomap_planner");
 	ros::NodeHandle n;
 	planner planner_object;
+	planner_object.setStart(0.0,0.0,0.5);
+	planner_object.init_start();
 
 	ros::Subscriber octree_sub = n.subscribe<octomap_msgs::Octomap>("/octomap_binary", 1, boost::bind(&octomapCallback, _1, &planner_object));
 	ros::Subscriber odom_sub = n.subscribe<nav_msgs::Odometry>("/bebop2/odometry_sensor1/odometry", 1, boost::bind(&odomCb, _1, &planner_object));
@@ -474,9 +427,6 @@ int main(int argc, char **argv)
 	traj_pub = n.advertise<trajectory_msgs::MultiDOFJointTrajectory>("waypoints",1);
 	
 	std::cout << "OMPL version: " << OMPL_VERSION << std::endl;
-	
-	planner_object.setStart(0,0,0);
-	planner_object.init_start();
 
 	ros::spin();
 
