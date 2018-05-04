@@ -1,0 +1,10 @@
+<launch>
+	
+	<node pkg="path_planning" type="path_planning_node" name="path_planning_node" output="screen"/>
+
+	<node pkg="process_map" type="pub_octomap" name="pub_octomap"/>
+
+        <arg name="command_args" value="-d /home/nrsl/moveit_ws/src/path_planning/conf/path_planning.rviz" />  
+  	<node pkg="rviz" type="rviz" name="rviz" args="$(arg command_args)"/>
+
+</launch>

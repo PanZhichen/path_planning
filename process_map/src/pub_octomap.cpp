@@ -33,18 +33,18 @@ int main(int argc, char **argv)
   octomap.header.frame_id = "odom";
 
   static int i=0;
-  ros::Rate loop_rate(10);
+  ros::Rate loop_rate(2);
   while (ros::ok())
   {
-//       if(i<10)
-//       {
+      if(i<6)
+      {
           octomap.header.stamp = ros::Time::now();
           octomap_pub.publish(octomap);
-//       }
-//       else{
-//           ros::shutdown();
-//       }
-//       i++;
+      }
+      else{
+          ros::shutdown();
+      }
+      i++;
     //ros::spinOnce();
     loop_rate.sleep();
   }
